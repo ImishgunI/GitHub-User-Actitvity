@@ -1,3 +1,3 @@
-module GitHub_User_Activity
+module GitHub-User-Activity
 
-go 1.24.0
+go 1.23.6
