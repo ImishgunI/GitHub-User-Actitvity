@@ -6,10 +6,18 @@ import (
 	"os"
 )
 
+type Event struct {
+	Id    int    `json:"id"`
+	Type  string `json:"type"`
+	Actor struct {
+		Id            int    `json:"id"`
+		Login         string `json:"login"`
+		Display_login string `json:"display_login"`
+	}
+}
+
 func main() {
-	var (
-		username string = getUsername()
-	)
+	username := getUsername()
 	fmt.Print(username)
 }
 
