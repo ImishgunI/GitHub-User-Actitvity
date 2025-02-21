@@ -20,9 +20,15 @@ func main() {
 	data := jsonHandle(username)
 	parseToMap(data)
 	msg := make([]Event, len(mp))
-	PushEvent(msg)
-	for i := range msg {
-		fmt.Println(msg[i].Message)
+	j := 0
+	for i := range mp {
+		switch mp[i]["type"] {
+		case "PushEvent":
+			j = PushEvent(msg, j, i)
+		}
+	}
+	for m := range msg {
+		fmt.Println(msg[m].Message)
 	}
 }
 
@@ -41,6 +47,7 @@ func jsonHandle(username string) []byte {
 		log.Fatal(err)
 	}
 	req.Header.Add("Accept", "application/vnd.github+json")
+	req.Header.Add("X-GitHub-Api-Version", "2022-11-28")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -62,32 +69,28 @@ func parseToMap(data []byte) {
 	}
 }
 
-func PushEvent(msg []Event) {
+func PushEvent(msg []Event, j, i int) int {
 	var (
 		login     any
 		repo_name any
 		message   any
 	)
-	j := 0
-	for i := range mp {
-		if mp[i]["type"] == "PushEvent" {
-			if actor, ok := mp[i]["actor"].(map[string]any); ok {
-				login = actor["login"].(string)
+	if actor, ok := mp[i]["actor"].(map[string]any); ok {
+		login = actor["login"].(string)
+	}
+	if repo, ok := mp[i]["repo"].(map[string]any); ok {
+		repo_name = repo["name"].(string)
+	}
+	if payload, ok := mp[i]["payload"].(map[string]any); ok {
+		k := 0
+		if commits, ok := payload["commits"].([]any); ok && len(commits) > 0 {
+			if commitData, ok := commits[k].(map[string]any); ok {
+				message, _ = commitData["message"].(string)
 			}
-			if repo, ok := mp[i]["repo"].(map[string]any); ok {
-				repo_name = repo["name"].(string)
-			}
-			if payload, ok := mp[i]["payload"].(map[string]any); ok {
-				k := 0
-				if commits, ok := payload["commits"].([]any); ok && len(commits) > 0 {
-					if commitData, ok := commits[k].(map[string]any); ok {
-						message, _ = commitData["message"].(string)
-					}
-					k++
-				}
-			}
-			msg[j].Message = fmt.Sprintf("%s pushed message: \"%s\" to repository: \"%s\"", login, message, repo_name)
-			j++
+			k++
 		}
 	}
+	msg[j].Message = fmt.Sprintf("%s pushed message: \"%s\" to repository: \"%s\"", login, message, repo_name)
+	j++
+	return j
 }
