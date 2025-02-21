@@ -9,14 +9,20 @@ import (
 	"os"
 )
 
+type Event struct {
+	Message string
+}
+
 var mp []map[string]any
 
 func main() {
 	username := getUsername()
 	data := jsonHandle(username)
 	parseToMap(data)
-	if payload, ok := mp[0]["payload"].(map[string]any); ok {
-		fmt.Print(payload["ref_type"])
+	msg := make([]Event, len(mp))
+	PushEvent(msg)
+	for i := range msg {
+		fmt.Println(msg[i].Message)
 	}
 }
 
@@ -53,5 +59,35 @@ func parseToMap(data []byte) {
 	err := json.Unmarshal(data, &mp)
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func PushEvent(msg []Event) {
+	var (
+		login     any
+		repo_name any
+		message   any
+	)
+	j := 0
+	for i := range mp {
+		if mp[i]["type"] == "PushEvent" {
+			if actor, ok := mp[i]["actor"].(map[string]any); ok {
+				login = actor["login"].(string)
+			}
+			if repo, ok := mp[i]["repo"].(map[string]any); ok {
+				repo_name = repo["name"].(string)
+			}
+			if payload, ok := mp[i]["payload"].(map[string]any); ok {
+				k := 0
+				if commits, ok := payload["commits"].([]any); ok && len(commits) > 0 {
+					if commitData, ok := commits[k].(map[string]any); ok {
+						message, _ = commitData["message"].(string)
+					}
+					k++
+				}
+			}
+			msg[j].Message = fmt.Sprintf("%s pushed message: \"%s\" to repository: \"%s\"", login, message, repo_name)
+			j++
+		}
 	}
 }
