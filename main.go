@@ -25,6 +25,8 @@ func main() {
 		switch mp[i]["type"] {
 		case "PushEvent":
 			j = PushEvent(msg, j, i)
+		case "CreateEvent":
+			j = CreateEvent(msg, j, i)
 		}
 	}
 	printMessage(msg)
@@ -97,6 +99,34 @@ func PushEvent(msg []Event, j, i int) int {
 		}
 	}
 	msg[j].Message = fmt.Sprintf("%s pushed message: \"%s\" to repository: \"%s\"", login, message, repo_name)
+	j++
+	return j
+}
+
+func CreateEvent(msg []Event, j, i int) int {
+	var (
+		login     any
+		repo_name any
+		ref       any
+		ref_type  any
+	)
+	if actor, ok := mp[i]["actor"].(map[string]any); ok {
+		login = actor["login"].(string)
+	}
+	if repo, ok := mp[i]["repo"].(map[string]any); ok {
+		repo_name = repo["name"].(string)
+	}
+	if payload, ok := mp[i]["payload"].(map[string]any); ok {
+		if payload["ref"] != nil {
+			ref = payload["ref"].(string)
+		}
+		ref_type = payload["ref_type"].(string)
+	}
+	if ref_type == "repository" {
+		msg[j].Message = fmt.Sprintf("\"%s\" created \"%s\", repository name: \"%s\"", login, ref_type, repo_name)
+	} else {
+		msg[j].Message = fmt.Sprintf("\"%s\" created \"%s\" with name \"%s\" in repo: \"%s\"", login, ref_type, ref, repo_name)
+	}
 	j++
 	return j
 }
