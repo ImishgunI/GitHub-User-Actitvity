@@ -27,9 +27,7 @@ func main() {
 			j = PushEvent(msg, j, i)
 		}
 	}
-	for m := range msg {
-		fmt.Println(msg[m].Message)
-	}
+	printMessage(msg)
 }
 
 func getUsername() string {
@@ -37,6 +35,14 @@ func getUsername() string {
 		log.Fatal("You must write a username")
 	}
 	return os.Args[1]
+}
+
+func printMessage(msg []Event) {
+	for m := range msg {
+		if msg[m].Message != "" {
+			fmt.Println(msg[m].Message)
+		}
+	}
 }
 
 func jsonHandle(username string) []byte {
