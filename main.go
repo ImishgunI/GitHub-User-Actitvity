@@ -40,9 +40,9 @@ func getUsername() string {
 }
 
 func printMessage(msg []Event) {
-	for m := range msg {
-		if msg[m].Message != "" {
-			fmt.Println(msg[m].Message)
+	for _, v := range msg {
+		if v.Message != "" {
+			fmt.Println(v.Message)
 		}
 	}
 }
@@ -123,9 +123,9 @@ func CreateEvent(msg []Event, j, i int) int {
 		ref_type = payload["ref_type"].(string)
 	}
 	if ref_type == "repository" {
-		msg[j].Message = fmt.Sprintf("\"%s\" created \"%s\", repository name: \"%s\"", login, ref_type, repo_name)
+		msg[j].Message = fmt.Sprintf("%s created \"%s\", repository name: \"%s\"", login, ref_type, repo_name)
 	} else {
-		msg[j].Message = fmt.Sprintf("\"%s\" created \"%s\" with name \"%s\" in repo: \"%s\"", login, ref_type, ref, repo_name)
+		msg[j].Message = fmt.Sprintf("%s created \"%s\" with name \"%s\" in repo: \"%s\"", login, ref_type, ref, repo_name)
 	}
 	j++
 	return j
