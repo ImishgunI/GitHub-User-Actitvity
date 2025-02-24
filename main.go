@@ -1,19 +1,26 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"time"
+
+	"github.com/go-redis/redis/v8"
 )
 
 type Event struct {
 	Message string
 }
 
-var mp []map[string]any
+var (
+	mp  []map[string]any
+	rdb *redis.Client
+)
 
 func main() {
 	username := getUsername()
@@ -45,6 +52,12 @@ func main() {
 	printMessage(msg)
 }
 
+func init() {
+	rdb = redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
+}
+
 func getUsername() string {
 	if len(os.Args) < 2 {
 		log.Fatal("You must write a username")
@@ -61,8 +74,13 @@ func printMessage(msg []Event) {
 }
 
 func jsonHandle(username string) []byte {
-	client := &http.Client{}
 	url := fmt.Sprintf("https://api.github.com/users/%s/events", username)
+	ctx := context.Background()
+	cachedData, err := rdb.Get(ctx, url).Result()
+	if err == nil {
+		return []byte(cachedData)
+	}
+	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Fatal(err)
@@ -77,6 +95,11 @@ func jsonHandle(username string) []byte {
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = rdb.Set(ctx, url, data, 600*time.Second).Err()
 	if err != nil {
 		log.Fatal(err)
 	}
