@@ -27,6 +27,8 @@ func main() {
 			j = PushEvent(msg, j, i)
 		case "CreateEvent":
 			j = CreateEvent(msg, j, i)
+		case "WatchEvent":
+			j = WatchEvent(msg, j, i)
 		}
 	}
 	printMessage(msg)
@@ -82,6 +84,7 @@ func PushEvent(msg []Event, j, i int) int {
 		login     any
 		repo_name any
 		message   any
+		size      float64
 	)
 	if actor, ok := mp[i]["actor"].(map[string]any); ok {
 		login = actor["login"].(string)
@@ -89,13 +92,19 @@ func PushEvent(msg []Event, j, i int) int {
 	if repo, ok := mp[i]["repo"].(map[string]any); ok {
 		repo_name = repo["name"].(string)
 	}
+
 	if payload, ok := mp[i]["payload"].(map[string]any); ok {
-		k := 0
-		if commits, ok := payload["commits"].([]any); ok && len(commits) > 0 {
-			if commitData, ok := commits[k].(map[string]any); ok {
-				message, _ = commitData["message"].(string)
+		size = payload["size"].(float64)
+		if size > 0 {
+			k := 0
+			if commits, ok := payload["commits"].([]any); ok && len(commits) > 0 {
+				if commitData, ok := commits[k].(map[string]any); ok {
+					message, _ = commitData["message"].(string)
+				}
+				k++
 			}
-			k++
+		} else {
+			return j
 		}
 	}
 	msg[j].Message = fmt.Sprintf("%s pushed message: \"%s\" to repository: \"%s\"", login, message, repo_name)
@@ -127,6 +136,26 @@ func CreateEvent(msg []Event, j, i int) int {
 	} else {
 		msg[j].Message = fmt.Sprintf("%s created \"%s\" with name \"%s\" in repo: \"%s\"", login, ref_type, ref, repo_name)
 	}
+	j++
+	return j
+}
+
+func WatchEvent(msg []Event, j, i int) int {
+	var (
+		login     any
+		repo_name any
+		action    any
+	)
+	if actor, ok := mp[i]["actor"].(map[string]any); ok {
+		login = actor["login"].(string)
+	}
+	if repo, ok := mp[i]["repo"].(map[string]any); ok {
+		repo_name = repo["name"].(string)
+	}
+	if payload, ok := mp[i]["payload"].(map[string]any); ok {
+		action = payload["action"].(string)
+	}
+	msg[j].Message = fmt.Sprintf("%s %s a repo \"%s\"", login, action, repo_name)
 	j++
 	return j
 }
