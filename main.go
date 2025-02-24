@@ -29,6 +29,8 @@ func main() {
 			j = CreateEvent(msg, j, i)
 		case "WatchEvent":
 			j = WatchEvent(msg, j, i)
+		case "PullRequestEvent":
+			j = PullRequestEvent(msg, j, i)
 		}
 	}
 	printMessage(msg)
@@ -81,9 +83,9 @@ func parseToMap(data []byte) {
 
 func PushEvent(msg []Event, j, i int) int {
 	var (
-		login     any
-		repo_name any
-		message   any
+		login     string
+		repo_name string
+		message   string
 		size      float64
 	)
 	if actor, ok := mp[i]["actor"].(map[string]any); ok {
@@ -114,10 +116,10 @@ func PushEvent(msg []Event, j, i int) int {
 
 func CreateEvent(msg []Event, j, i int) int {
 	var (
-		login     any
-		repo_name any
-		ref       any
-		ref_type  any
+		login     string
+		repo_name string
+		ref       string
+		ref_type  string
 	)
 	if actor, ok := mp[i]["actor"].(map[string]any); ok {
 		login = actor["login"].(string)
@@ -142,9 +144,9 @@ func CreateEvent(msg []Event, j, i int) int {
 
 func WatchEvent(msg []Event, j, i int) int {
 	var (
-		login     any
-		repo_name any
-		action    any
+		login     string
+		repo_name string
+		action    string
 	)
 	if actor, ok := mp[i]["actor"].(map[string]any); ok {
 		login = actor["login"].(string)
@@ -156,6 +158,38 @@ func WatchEvent(msg []Event, j, i int) int {
 		action = payload["action"].(string)
 	}
 	msg[j].Message = fmt.Sprintf("%s %s a repo \"%s\"", login, action, repo_name)
+	j++
+	return j
+}
+
+func PullRequestEvent(msg []Event, j, i int) int {
+	var (
+		login     string
+		repo_name string
+		action    string
+		title     string
+		body      string
+	)
+	if actor, ok := mp[i]["actor"].(map[string]any); ok {
+		login = actor["login"].(string)
+	}
+	if repo, ok := mp[i]["repo"].(map[string]any); ok {
+		repo_name = repo["name"].(string)
+	}
+	if payload, ok := mp[i]["payload"].(map[string]any); ok {
+		action = payload["action"].(string)
+		if pr, ok := payload["pull_request"].(map[string]any); ok {
+			title = pr["title"].(string)
+			if pr["body"] != nil {
+				body = pr["body"].(string)
+			}
+		}
+	}
+	if body == "" {
+		msg[j].Message = fmt.Sprintf("%s %s pull request in repo \"%s\". Title of PR: \"%s\"", login, action, repo_name, title)
+	} else {
+		msg[j].Message = fmt.Sprintf("%s %s pull request in repo \"%s\". Title of PR: \"%s\", body of PR: \"%s\".", login, action, repo_name, title, body)
+	}
 	j++
 	return j
 }
