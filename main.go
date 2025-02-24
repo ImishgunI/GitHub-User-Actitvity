@@ -31,7 +31,16 @@ func main() {
 			j = WatchEvent(msg, j, i)
 		case "PullRequestEvent":
 			j = PullRequestEvent(msg, j, i)
+		case "DeleteEvent":
+			j = DeleteEvent(msg, j, i)
+		case "ForkEvent":
+			j = ForkEvent(msg, j, i)
+		case "IssueEvent":
+			j = IssueEvent(msg, j, i)
+		case "ReleaseEvent":
+			j = ReleaseEvent(msg, j, i)
 		}
+
 	}
 	printMessage(msg)
 }
@@ -190,6 +199,100 @@ func PullRequestEvent(msg []Event, j, i int) int {
 	} else {
 		msg[j].Message = fmt.Sprintf("%s %s pull request in repo \"%s\". Title of PR: \"%s\", body of PR: \"%s\".", login, action, repo_name, title, body)
 	}
+	j++
+	return j
+}
+
+func DeleteEvent(msg []Event, j, i int) int {
+	var (
+		login     string
+		repo_name string
+		ref       string
+		ref_type  string
+	)
+	if actor, ok := mp[i]["actor"].(map[string]any); ok {
+		login = actor["login"].(string)
+	}
+	if repo, ok := mp[i]["repo"].(map[string]any); ok {
+		repo_name = repo["name"].(string)
+	}
+	if payload, ok := mp[i]["payload"].(map[string]any); ok {
+		ref = payload["ref"].(string)
+		ref_type = payload["ref_type"].(string)
+	}
+	msg[j].Message = fmt.Sprintf("%s delete %s: \"%s\" in repo \"%s\"", login, ref_type, ref, repo_name)
+	j++
+	return j
+}
+
+func ForkEvent(msg []Event, j, i int) int {
+	var (
+		login     string
+		repo_name string
+		fork_name string
+	)
+	if actor, ok := mp[i]["actor"].(map[string]any); ok {
+		login = actor["login"].(string)
+	}
+	if repo, ok := mp[i]["repo"].(map[string]any); ok {
+		repo_name = repo["name"].(string)
+	}
+	if payload, ok := mp[i]["payload"].(map[string]any); ok {
+		if forkee, ok := payload["forkee"].(map[string]any); ok {
+			fork_name = forkee["full_name"].(string)
+		}
+	}
+	msg[j].Message = fmt.Sprintf("%s forked a repo: \"%s\", fork_name: \"%s\"", login, repo_name, fork_name)
+	j++
+	return j
+}
+
+func IssueEvent(msg []Event, j, i int) int {
+	var (
+		login     string
+		repo_name string
+		action    string
+		title     string
+	)
+	if actor, ok := mp[i]["actor"].(map[string]any); ok {
+		login = actor["login"].(string)
+	}
+	if repo, ok := mp[i]["repo"].(map[string]any); ok {
+		repo_name = repo["name"].(string)
+	}
+	if payload, ok := mp[i]["payload"].(map[string]any); ok {
+		action = payload["action"].(string)
+		if issue, ok := payload["issue"].(map[string]any); ok {
+			title = issue["title"].(string)
+		}
+	}
+	msg[j].Message = fmt.Sprintf("%s %s issue in repo \"%s\", issue title: \"%s\"", login, action, repo_name, title)
+	j++
+	return j
+}
+
+func ReleaseEvent(msg []Event, j, i int) int {
+	var (
+		login     string
+		repo_name string
+		action    string
+		tag_name  string
+		version   string
+	)
+	if actor, ok := mp[i]["actor"].(map[string]any); ok {
+		login = actor["login"].(string)
+	}
+	if repo, ok := mp[i]["repo"].(map[string]any); ok {
+		repo_name = repo["name"].(string)
+	}
+	if payload, ok := mp[i]["payload"].(map[string]any); ok {
+		action = payload["action"].(string)
+		if release, ok := payload["issue"].(map[string]any); ok {
+			tag_name = release["name"].(string)
+			version = release["tag_name"].(string)
+		}
+	}
+	msg[j].Message = fmt.Sprintf("%s %s \"%s\" with tag: \"%s %s\"", login, action, repo_name, tag_name, version)
 	j++
 	return j
 }
