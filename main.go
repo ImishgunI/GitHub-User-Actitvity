@@ -17,6 +17,17 @@ type Event struct {
 	Message string
 }
 
+type EventSort struct {
+	Push    bool
+	Create  bool
+	Watch   bool
+	Pr      bool
+	Delete  bool
+	Fork    bool
+	Issue   bool
+	Release bool
+}
+
 var (
 	mp  []map[string]any
 	rdb *redis.Client
@@ -27,35 +38,78 @@ func main() {
 	data := jsonHandle(username)
 	parseToMap(data)
 	msg := make([]Event, len(mp))
-	j := 0
+	var s EventSort
+	t := s.getSort()
+	if t == nil {
+		j := 0
+		printMessage(msg, j)
+	} else {
+		printBySort(msg, t)
+	}
+}
+
+func chooseEvent(msg *[]Event, j *int) {
 	for i := range mp {
 		switch mp[i]["type"] {
 		case "PushEvent":
-			j = PushEvent(msg, j, i)
+			*j = PushEvent(*msg, *j, i)
 		case "CreateEvent":
-			j = CreateEvent(msg, j, i)
+			*j = CreateEvent(*msg, *j, i)
 		case "WatchEvent":
-			j = WatchEvent(msg, j, i)
+			*j = WatchEvent(*msg, *j, i)
 		case "PullRequestEvent":
-			j = PullRequestEvent(msg, j, i)
+			*j = PullRequestEvent(*msg, *j, i)
 		case "DeleteEvent":
-			j = DeleteEvent(msg, j, i)
+			*j = DeleteEvent(*msg, *j, i)
 		case "ForkEvent":
-			j = ForkEvent(msg, j, i)
+			*j = ForkEvent(*msg, *j, i)
 		case "IssueEvent":
-			j = IssueEvent(msg, j, i)
+			*j = IssueEvent(*msg, *j, i)
 		case "ReleaseEvent":
-			j = ReleaseEvent(msg, j, i)
+			*j = ReleaseEvent(*msg, *j, i)
 		}
 
 	}
-	printMessage(msg)
 }
 
 func init() {
 	rdb = redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 	})
+}
+
+func printBySort(msg []Event, t *EventSort) {
+
+}
+
+func (s *EventSort) getSort() *EventSort {
+	if len(os.Args) > 2 && len(os.Args) < 4 {
+		if os.Args[2] == "sort_by" {
+			switch os.Args[3] {
+			case "push_event":
+				s.Push = true
+			case "create_event":
+				s.Create = true
+			case "watch_event":
+				s.Watch = true
+			case "PR_event":
+				s.Pr = true
+			case "delete_event":
+				s.Delete = true
+			case "fork_event":
+				s.Fork = true
+			case "issue_event":
+				s.Issue = true
+			case "release_event":
+				s.Release = true
+			}
+		} else {
+			log.Fatal("Needs to write sort_by")
+		}
+	} else {
+		return nil
+	}
+	return s
 }
 
 func getUsername() string {
@@ -65,7 +119,8 @@ func getUsername() string {
 	return os.Args[1]
 }
 
-func printMessage(msg []Event) {
+func printMessage(msg []Event, j int) {
+	chooseEvent(&msg, &j)
 	for _, v := range msg {
 		if v.Message != "" {
 			fmt.Println(v.Message)
