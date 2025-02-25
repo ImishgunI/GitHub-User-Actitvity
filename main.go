@@ -38,13 +38,12 @@ func main() {
 	data := jsonHandle(username)
 	parseToMap(data)
 	msg := make([]Event, len(mp))
-	var s EventSort
+	s := EventSort{}
 	t := s.getSort()
 	if t == nil {
-		j := 0
-		printMessage(msg, j)
+		printMessage(msg)
 	} else {
-		printBySort(msg, t)
+		printBySort(msg, *t)
 	}
 }
 
@@ -72,18 +71,63 @@ func chooseEvent(msg *[]Event, j *int) {
 	}
 }
 
+func chooseEventBySort(msg *[]Event, typeEvent string) {
+	j := 0
+	for i := range mp {
+		if mp[i]["type"] == typeEvent {
+			switch typeEvent {
+			case "PushEvent":
+				j = PushEvent(*msg, j, i)
+			case "CreateEvent":
+				j = CreateEvent(*msg, j, i)
+			case "WatchEvent":
+				j = WatchEvent(*msg, j, i)
+			case "PullRequestEvent":
+				j = PullRequestEvent(*msg, j, i)
+			case "DeleteEvent":
+				j = DeleteEvent(*msg, j, i)
+			case "ForkEvent":
+				j = ForkEvent(*msg, j, i)
+			case "IssueEvent":
+				j = IssueEvent(*msg, j, i)
+			case "ReleaseEvent":
+				j = ReleaseEvent(*msg, j, i)
+			}
+		}
+	}
+}
+
 func init() {
 	rdb = redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 	})
 }
 
-func printBySort(msg []Event, t *EventSort) {
-
+func printBySort(msg []Event, t EventSort) {
+	if t.Push {
+		chooseEventBySort(&msg, "PushEvent")
+	} else if t.Create {
+		chooseEventBySort(&msg, "CreateEvent")
+	} else if t.Watch {
+		chooseEventBySort(&msg, "WatchEvent")
+	} else if t.Pr {
+		chooseEventBySort(&msg, "PullRequestEvent")
+	} else if t.Delete {
+		chooseEventBySort(&msg, "DeleteEvent")
+	} else if t.Fork {
+		chooseEventBySort(&msg, "ForkEvent")
+	} else if t.Release {
+		chooseEventBySort(&msg, "ReleaseEvent")
+	}
+	for _, v := range msg {
+		if v.Message != "" {
+			fmt.Println(v.Message)
+		}
+	}
 }
 
 func (s *EventSort) getSort() *EventSort {
-	if len(os.Args) > 2 && len(os.Args) < 4 {
+	if len(os.Args) > 2 && len(os.Args) < 5 {
 		if os.Args[2] == "sort_by" {
 			switch os.Args[3] {
 			case "push_event":
@@ -119,7 +163,8 @@ func getUsername() string {
 	return os.Args[1]
 }
 
-func printMessage(msg []Event, j int) {
+func printMessage(msg []Event) {
+	j := 0
 	chooseEvent(&msg, &j)
 	for _, v := range msg {
 		if v.Message != "" {
